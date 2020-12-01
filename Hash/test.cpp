@@ -42,6 +42,17 @@ TEST(Constructors, C) {
 }
 
 TEST(Constructors, D) {
+	std::vector<std::pair<std::string, int>> elements(9);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map<std::string, int> table(elements.begin(), elements.end());
+	std::cout << table.contains("death");
+}
+
+TEST(Constructors, E) {
 	fefu::hash_map<std::string, int> table_one(10);
 	std::vector<std::pair<std::string, int>> elements(5);
 	elements[0] = { "death", 1 };
@@ -50,22 +61,43 @@ TEST(Constructors, D) {
 	elements[3] = { "peace", 4 };
 	elements[4] = { "help", 5 };
 	table_one.insert(elements.begin(), elements.end());
-
 	fefu::hash_map<std::string, int> table = std::move(table_one);
-
 }
 
-TEST(Interators, A) {
+TEST(Constructors, F) {
+	fefu::hash_map<std::string, int> table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	EXPECT_EQ(table.at("death"), 1);
+	EXPECT_FALSE(table.cbegin() == table.cend());
+}
+
+TEST(Constructors, G) {
+	std::vector<std::pair<std::string, int>> elements(9);
+	elements[0] = { "death", 1 };
+	elements[1] = { "rest", 2 };
+	elements[2] = { "in", 3 };
+	elements[3] = { "peace", 4 };
+	elements[4] = { "help", 5 };
+	fefu::hash_map<std::string, int> table(elements.begin(), elements.end(), 7);
+	std::cout << table.contains("death");
+}
+
+TEST(Iterators, A) {
 	fefu::hash_map<int, char> table;
 	EXPECT_EQ(table.begin(), table.end());
+	EXPECT_TRUE(table.cbegin() == table.cend());
 }
 
-TEST(Interators, B) {
+TEST(Iterators, B) {
 	fefu::hash_map<std::string, int> table(2);
 	std::pair<std::string, int> element{ "yes", 1 };
 	table.insert(element);
 	EXPECT_TRUE(table.begin()->first == "yes");
 	EXPECT_TRUE(table.begin()->second == 1);
+}
+
+TEST(Iterators, C) {
+	fefu::hash_map<std::string, int> table({ {"death", 1}, {"rest", 23}, {"help", 3}, {"my", 11}, {"give", 11} });
+	EXPECT_FALSE(table.cbegin() == table.cend());
 }
 
 TEST(Insert, A) {
@@ -133,14 +165,7 @@ TEST(At, C) {
 	elements[3] = { "peace", 4 };
 	elements[4] = { "help", 5 };
 	fefu::hash_map<std::string, int> table(elements.begin(), elements.end());
-	EXPECT_EQ(table.at("death"), 1);
-}
-
-TEST(Hash, A) {
-	fefu::hash_map<std::string, int> table({ {"ab1", 1}, {"ab2", 2}, {"ab3", 3}, {"ab4", 4} });
-	fefu::hash_map<std::string, int> table_one(table);
-	fefu::hash_map<std::string, int> table_two({ {"ab1", 1}, {"ab2", 2}, {"ab3", 3}, {"ab4", 4} });
-	EXPECT_EQ(table_one.begin(), table_two.begin());
+	EXPECT_TRUE(table.contains("death"));
 }
 
 TEST(Size, A) {
@@ -170,10 +195,20 @@ TEST(Operators, B) {
 }
 
 TEST(Operators, C) {
-
-}
-
-int main() {
 	fefu::hash_map<std::string, int> table({ {"ab1", 1}, {"ab2", 2}, {"ab3", 3}, {"ab4", 4} });
 	fefu::hash_map<std::string, int> table_one(table);
+}
+
+TEST(Bucket, A) {
+	fefu::hash_map<std::string, int> table({ {"give", 11}, {"love", 41}, {"me", 3}, {"death", 41} });
+	ASSERT_TRUE(table.bucket("give"));
+	ASSERT_TRUE(table.bucket("love"));
+
+	table.insert(std::pair<std::string, int>("help", 4));
+	table.insert(std::pair<std::string, int>("death", 1));
+	table.insert(std::pair<std::string, int>("make", 8));
+	table.insert(std::pair<std::string, int>("peace", 6));
+
+	ASSERT_TRUE(table.bucket("help"));
+	ASSERT_TRUE(table.bucket("death"));
 }

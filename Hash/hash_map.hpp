@@ -203,8 +203,21 @@ public:
      *  distance(first,last)).
      */
     template<typename InputIterator>
-    hash_map(InputIterator first, InputIterator last, size_type n = 0) : data(alloc.allocate(n)), status_table(n), count_buckets(n) {
-        insert(first, last);
+    hash_map(InputIterator first, InputIterator last, size_type n = 0) : hash_map(n) {
+        if (n == 0) {
+            size_type count = 0;
+            for (auto i = first; i != last; i++) {
+                count++;
+            }
+            hash_map table(count);
+            swap(table);
+            insert(first, last);
+        }
+        else {
+            hash_map table(n);
+            swap(table);
+            insert(first, last);
+        }
     }
 
     /// Copy constructor.
@@ -258,7 +271,7 @@ public:
     //hash_map(std::initializer_list<value_type> l, size_type n = 0) : data(alloc.allocate(n)), status_table(n), count_buckets(n) {
     //    insert(l);
     //}
-    hash_map(std::initializer_list<value_type> l, size_type n = 0) : hash_map((n != 0) ? n : (l.size() * 2)) {
+    hash_map(std::initializer_list<value_type> l, size_type n = 0) : hash_map((n != 0) ? n : 2 * l.size()) {
         insert(l);
     }
 
@@ -465,7 +478,7 @@ public:
                 status_table[index] = 1;
                 non_empty_buckets++;
             }
-            if (load_factor() >= max_load) {
+            if (load_factor() >= max_load_factor()) {
                 rehash(2 * count_buckets);
                 return std::make_pair(find(x.first), true);
             } else return std::make_pair(iterator(data, status_table, index), true);
@@ -488,7 +501,7 @@ public:
                 status_table[index] = 1;
                 non_empty_buckets++;
             }
-            if (load_factor() >= max_load) {
+            if (load_factor() >= max_load_factor()) {
                 rehash(2 * count_buckets);
                 return std::make_pair(find(x.first), true);
             }
@@ -658,12 +671,13 @@ public:
     void swap(hash_map& other) {
         using std::swap;
         swap(data, other.data);
-        swap(alloc, other.alloc);
+        swap(alloc, other.get_allocator());
         swap(status_table, other.status_table);
+        swap(count_buckets, other.count_buckets);
         swap(non_empty_buckets, other.non_empty_buckets);
         swap(max_load, other.max_load);
-        swap(equal, other.equal);
-        swap(hash, other.hash);
+        swap(equal, other.key_eq());
+        swap(hash, other.hash_function());
     }
 
     template<typename _H2, typename _P2>
@@ -725,8 +739,7 @@ public:
         //если по этому индексу лежит нужный элемент и в статусе его место равно 1
         if (data[index].first == x && status_table[index] == 1) {
             return const_iterator(data, status_table, index);
-        }
-        else return cend();
+        } else return cend();
     }
     //@}
 
@@ -794,8 +807,7 @@ public:
         auto element = find(k);
         if (element != end()) {
             return element->second;
-        }
-        else throw std::out_of_range("Out of range");
+        } else throw std::out_of_range("Out of range");
     }
 
     const mapped_type& at(const key_type& k) const {
@@ -820,12 +832,11 @@ public:
     * @return  The key bucket index.
     */
     size_type bucket(const key_type& _K) const {
-        auto element = find(_K);
-        if (element != end()) {
-            return element.position;
+        size_type index = hash(_K) % count_buckets;
+        while (data[index].first != _K && status_table[index] != 0) {
+            index = (index + hash(_K)) % count_buckets;
         }
-        //мейби ошибку кинуть
-        else return -1;
+        return index;
     }
 
     // hash policy.
@@ -873,7 +884,7 @@ public:
      *  Same as rehash(ceil(n / max_load_factor())).
      */
     void reserve(size_type n) {
-        rehash(round_up(ceil(n / max_load_factor())));
+        rehash(ceil(n / max_load_factor()));
     }
 
     bool operator==(const hash_map& other) const {
